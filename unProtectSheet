@@ -1,0 +1,84 @@
+/**************************** Phạm Đình Tuân - 14/3/2023 *******************************
+ * Mở khóa sheet, kiểm tra sheet có bị khóa không hoặc có quyền mở không
+ **************************************************************************************/
+
+function unProtectSheetID(id, sheetName) {
+  var ss = SpreadsheetApp.openById(id);
+  var sheet = ss.getSheetByName(sheetName);
+  if (ss && sheet) {
+    var protections = sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET);
+    if (protections.length > 0) {
+      if (protections[0].canEdit()) {
+        protections[0].remove();
+        return 1;
+      }
+    }
+  }
+  return 0;
+}
+
+function unProtectSheet(){
+  alertBegin();
+  const ss = SpreadsheetApp.getActive().getActiveSheet();
+  const data = ss.getDataRange().getValues(); // Lấy tất cả dữ liệu trong sheets đó với 1 dòng tương ứng một mảng
+  var ui = SpreadsheetApp.getUi() // Or DocumentApp or FormApp.
+  
+  let s = 0;
+  
+  for (var i = 0; i < data.length-1; i++){
+    s = s + data[i][1];
+  }
+  
+  if (s == 0){ 
+    const message = 'Không có sheet nào được check';
+    ui.alert("Thông báo",message, ui.ButtonSet.OK);
+    return;
+  }
+ 
+  for (var i = 1; i < data.length; i++){
+    const fileName = data[i][3];
+    const id = data[i][4];
+    const sheetName = data[i][5];
+ 
+    // Nếu ô B1 được check thì khóa hết bảng
+    if (data[0][1]){
+      // Nếu id khác rỗng mới làm
+      if(id!=''){ 
+        var check = unProtectSheetID(id, sheetName);
+        if(id!='' && sheetName!=''){ // Nếu id và sheet khác rỗng mới làm
+          if (check){
+            ss.getRange("G"+(i+1)).setValue("Đã mở");
+            ss.getRange("H"+(i+1)).setValue(new Date());
+            const message = 'Đã mở khóa xong sheet <'+sheetName+'>';
+            ui.alert("Thông báo",message, ui.ButtonSet.OK);
+            } else {
+            const message = 'Sheet <'+sheetName+'> không bị khóa';
+            ui.alert("Thông báo",message, ui.ButtonSet.OK);
+          }
+        }
+      }
+    } else {
+      // Nếu ô B1 không được dánh dấu thì chỉ khóa dòng nào được check
+      if (data[i][1]){
+        if(id!='' && sheetName!=''){ // Nếu id và sheet khác rỗng mới làm
+          var check = unProtectSheetID(id, sheetName);
+          if (check){
+            ss.getRange("G"+(i+1)).setValue("Đã mở");
+            ss.getRange("H"+(i+1)).setValue(new Date());
+            const message = 'Đã mở khóa xong sheet <'+sheetName+'>';
+            ui.alert("Thông báo",message, ui.ButtonSet.OK);
+            } else {
+            const message = 'Sheet <'+sheetName+'> không bị khóa hoặc không đủ quyền mở khóa, không đúng tên sheet (Chú ý dấu cách trong tên sheet)';
+            ui.alert("Thông báo",message, ui.ButtonSet.OK);
+          }
+        }
+      }
+    }
+  }
+}
+
+function alertBegin(){
+    SpreadsheetApp.getUi() // Or DocumentApp or FormApp.
+     .alert('Bạn chọn mở khóa các sheet dưới đây!');
+
+}
