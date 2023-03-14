@@ -1,5 +1,6 @@
 /**************************** Phạm Đình Tuân - 14/3/2023 *******************************
  * Khóa sheet, add danh sách email có quyền sửa
+ https://docs.google.com/spreadsheets/d/1cxr5djU_Y62sCh8dYIqmfK5I3CzFEGauxjGaU8HIORs/edit#gid=1461101682
  **************************************************************************************/
  
 function protectSheetID(id) {
