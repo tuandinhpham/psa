@@ -1,0 +1,77 @@
+/**************************** Phạm Đình Tuân - 14/3/2023 *******************************
+ * Khóa sheet, add danh sách email có quyền sửa
+ **************************************************************************************/
+ 
+function protectSheetID(id) {
+  // Protect sheets
+  var ss = SpreadsheetApp.openById(id);
+  var range = ss.getSheets();
+  
+  /* Remove all range protections in the spreadsheet that the user has permission to edit.
+  for (var j = 0; j < range.length; j++) {
+    var sheet = ss.getSheetByName(range[j].getName());
+    var protections = sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET);
+    for (var i = 0; i < protections.length; i++) {
+      var protection = protections[i];
+      if (protection.canEdit()) {
+        protection.remove();
+      }
+    }
+  }  */
+  
+  // Protect sheet, then remove everyone, add the list of editors.
+  for (i=0; i < range.length; i++) {
+    var sheet = ss.getSheetByName(range[i].getName());
+    var protection = sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET);
+    if (protection.length == 0) {
+      var protection = sheet.protect().setDescription('P.TTTT protected ' + sheet);
+      var me = Session.getEffectiveUser();
+      // Ensure the current user is an editor before removing others. Otherwise, if the user's edit
+      // permission comes from a group, the script throws an exception upon removing the group.
+      protection.addEditor(me);
+      protection.removeEditors(protection.getEditors());
+      const editors = ["tuanpham@psa.vn", "loctran@psa.vn", "giangdo@psa.vn", me];
+      protection.addEditors(editors); 
+
+      if (protection.canDomainEdit()) {
+        protection.setDomainEdit(false);
+      }  
+    }
+  }
+}
+
+function protectSheet(){
+  SpreadsheetApp.getUi() // Or DocumentApp or FormApp.
+     .alert('Bạn chọn khóa các file dưới đây!');
+
+  const ss = SpreadsheetApp.getActive().getActiveSheet();
+  const data = ss.getDataRange().getValues(); // Lấy tất cả dữ liệu trong sheets đó với 1 dòng tương ứng một mảng
+ 
+  for (var i = 1; i < data.length; i++){
+    const id = data[i][4];
+    const fileName = data[i][3];
+ 
+    // Nếu ô B1 được check thì khóa hết bảng
+    if (data[0][1]){
+    //  console.log('i= ' + i + ', đang xử lý file ' + fileName, ' id: ' + id);
+      if(id!=''){ // Nếu id khác rỗng mới làm
+        protectSheetID(id);
+        ss.getRange("F"+(i+1)).setValue("Đã khóa");
+        ss.getRange("G"+(i+1)).setValue(new Date());
+      }
+    } else {
+      // Nếu ô B1 không được dánh dấu thì chỉ khóa dòng nào được check
+      if (data[i][1]){
+        // console.log('i= ' + (i) + ', đang xử lý file ' + fileName, ' id: ' + id);
+        if(id!=''){ // Nếu id khác rỗng mới làm
+          protectSheetID(id);
+          ss.getRange("F"+(i+1)).setValue("Đã khóa");
+          ss.getRange("G"+(i+1)).setValue(new Date());
+        }
+      }
+    }
+  }
+  const ui = SpreadsheetApp.getUi();
+  const message = 'Đã khóa xong các file được chọn';
+  ui.alert("Thông báo",message, ui.ButtonSet.OK);
+}
