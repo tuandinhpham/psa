@@ -1,0 +1,98 @@
+/* Khóa vùng bằng hàm protectSheet(), bỏ khóa bằng hàm removeProtectSheet()
+- Chỉ khóa những dòng có dấu check
+- Cho phép check toàn bộ bảng
+- Thông báo sau khi xử lý xong
+*/
+
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  ui.createMenu('Khóa dữ liệu')
+      .addItem('Khóa dữ liệu bếp', 'menuItem1')
+      .addToUi();
+}
+
+function menuItem1() {
+  SpreadsheetApp.getUi() // Or DocumentApp or FormApp.
+     .alert('Bạn chọn khóa dữ liệu tự động!');
+  protectSheet();
+}
+
+function protectSheet(){
+  const ss = SpreadsheetApp.getActive().getActiveSheet();
+  const data = ss.getDataRange().getValues(); // Lấy tất cả dữ liệu trong sheets đó với 1 dòng tương ứng một mảng
+ 
+  for (var i = 1; i < data.length; i++){
+    const id = data[i][4];
+    const lockdate = data[i][2];
+    const fileName = data[i][3];
+ 
+    // Nếu ô hàng 1 được check thì khóa hết bảng
+    if (data[0][1]){
+      console.log('i= ' + i + ', protectSheet() / đang xử lý file ' + fileName, 'id: ' + id, ' Ngày khóa: ' + lockdate);
+      if(id!=''){ // Nếu id khác rỗng mới làm
+        protectRange(id, lockdate);
+        ss.getRange("F"+(i+1)).setValue("Đã khóa");
+        ss.getRange("G"+(i+1)).setValue(new Date());
+      }
+    } else {
+      // Nếu không check ô hàng 1 thì chỉ khóa ô nào được check
+      if (data[i][1]){
+        console.log('i= ' + (i) + ', protectSheet() / đang xử lý file ' + fileName, 'id: ' + id, ' Ngày khóa: ' + lockdate);
+        if(id!=''){ // Nếu id khác rỗng mới làm
+          protectRange(id, lockdate);
+          ss.getRange("F"+(i+1)).setValue("Đã khóa");
+          ss.getRange("G"+(i+1)).setValue(new Date());
+        }
+      }
+    }
+  }
+  const ui = SpreadsheetApp.getUi();
+  const message = 'Bạn đã khóa xong dữ liệu bếp';
+  ui.alert("Warning!",message, ui.ButtonSet.OK);
+}
+
+function protectRange(id, lockdate) {
+  // Remove all range protections in the spreadsheet that the user has permission to edit.
+  var ss = SpreadsheetApp.openById(id).getSheetByName('Data 2022');
+  var protections = ss.getProtections(SpreadsheetApp.ProtectionType.RANGE);
+  for (var i = 0; i < protections.length; i++) {
+    var protection = protections[i];
+    if (protection.canEdit()) {
+      protection.remove();
+    }
+  }
+
+  const j = dongKhoa(id, lockdate);
+  var range = ss.getRange('A1:K' + j);
+  protection = range.protect().setDescription('P.TTTT khóa dữ liệu');
+  
+  const editors = ["tuanpham@psa.vn", "loctran@psa.vn", "giangdo@psa.vn"];
+  protection.addEditors(editors); 
+  
+  if (protection.canDomainEdit()) {
+    protection.setDomainEdit(false);
+  }
+}
+
+function dongKhoa(id, lockdate){
+  const ss = SpreadsheetApp.openById(id);
+  ss.getSheetByName('Data 2022');
+  const ssValue = ss.getDataRange().getValues();  
+  const ssDate = [];
+
+  for ( i=0; i<ssValue.length; i++){
+    ssDate.push([new Date(ssValue[i][0])]);
+  }
+
+  const ssDate2 = [];
+  ssDate2.push([new Date(lockdate)]);
+
+  for (var i = ssDate.length; i>1; i--){
+    if (ssDate[i-1][0] <= ssDate2[0][0]){
+      console.log('dongKhoa()/for/i= ' + i);
+      return i;  
+    } 
+  }
+  console.log('dongKhoa()/i= ' + i);
+  return i;
+}
