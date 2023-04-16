@@ -1,0 +1,107 @@
+/**************************** Phạm Đình Tuân - 15/4/2023 - psa.vn *******************************
+ * Remove email nghỉ việc: Remove editors, viewers, commenters
+ * Phân quyền email cho NV mới: Add editors, Add viewers, Add commenters
+ * getDataFromSpreadsheet(): Hàm này lấy dữ liệu từ bảng tính Sheet1 và trả về một mảng chứa các hàng dữ liệu. Mỗi hàng dữ liệu bao gồm URL, email và loại quyền.
+ * getFileByUrl(url): Hàm này lấy tệp tin từ URL được cung cấp và trả về một đối tượng tệp tin.
+ * getIdFromUrl(url): Hàm này lấy ID tệp từ URL được cung cấp và trả về một chuỗi ID.
+ * updateFilePermissions(file, email, accessType): Hàm này cập nhật quyền truy cập cho tệp tin được cung cấp theo email và loại quyền được cung cấp.
+ * Main function: updatePermissionsForAllFiles(): Hàm này lấy dữ liệu từ bảng tính, cập nhật quyền
+ * *********************************************************************************************/
+
+// Function to retrieve data from spreadsheet
+function getDataFromSpreadsheet() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Sheet1');
+  const lastRow = sheet.getLastRow();
+  const dataRange = sheet.getRange(2, 1, lastRow - 1, 4);
+  const data = dataRange.getValues();
+  return data;
+}
+
+// Function to get file by URL
+function getFileByUrl(url) {
+  const file = DriveApp.getFileById(getIdFromUrl(url));
+  return file;
+}
+
+// Function to get file ID from URL
+function getIdFromUrl(url) {
+  const regex = /[-\w]{25,}/;
+  const match = url.match(regex);
+  return match[0];
+}
+
+// Function to update file permissions
+function updateFilePermissions(file, email, accessType) {
+  if (file.getEditors !== null) {
+    if (accessType === 'Add editors') {
+      file.addEditor(email);
+      return true;
+    } else if (accessType === 'Add viewers') {
+      file.addViewer(email);
+      return true;
+    } else if (accessType === 'Add commenters') {
+      file.addCommenter(email);
+      return true;
+    } else if (accessType === 'Remove editors') {
+      return removeEmail(file, email, accessType);
+    } else if (accessType === 'Remove viewers') {
+      return removeEmail(file, email, accessType);
+    } else if (accessType === 'Remove commenters') {
+      return removeEmail(file, email, accessType);
+    }
+  }
+  return false;
+}
+
+// Function remove editor, viewer, commenter mail
+function removeEmail(fileId, emailToCheck, accessType) {
+  if (accessType == 'Remove editors') {
+    var editors = fileId.getEditors();
+    for (var i = 0; i < editors.length; i++) {
+      if (editors[i].getEmail().toLowerCase() == emailToCheck.toLowerCase()) {
+        fileId.removeEditor(emailToCheck);
+        Logger.log('Remove editors: ' + emailToCheck + ". Email has been removed from file.");
+        return true;
+      } 
+    } 
+    Logger.log('Remove editors: ' + emailToCheck + " Email does not have access to the file.");
+    return false;
+  } else if (accessType == 'Remove viewers') {
+    var viewers = fileId.getViewers();
+    for (var i = 0; i < viewers.length; i++) {
+      if (viewers[i].getEmail().toLowerCase() == emailToCheck.toLowerCase()) {
+        fileId.removeViewer(emailToCheck);
+        Logger.log('Remove viewers: ' + emailToCheck + ". Email has been removed from file.");
+        return true;
+      }
+    } 
+    Logger.log('Remove viewers: ' + emailToCheck + " Email does not have access to the file.");
+    return false;
+  } else if (accessType == 'Remove commenters') {
+      Logger.log('Remove commenters: ' + emailToCheck + '. email is NOT remove from file... HEPL ME PLESASE. THANK YOU!');
+      return false;
+  }
+  return false;
+}
+
+// Function to update permissions for all files in list
+function updatePermissionsForAllFiles() {
+  const data = getDataFromSpreadsheet();
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Log');
+  const log = [];
+  data.forEach(function(row) {
+    const url = row[0];
+    const email = row[1];
+    const accessType = row[3];
+    const file = getFileByUrl(url);
+    const success = updateFilePermissions(file, email, accessType);
+    if (success) {
+      log.push([new Date(), url, email, accessType, 'Done']);
+    } else {
+      log.push([new Date(), url, email, accessType, 'Nothing change']);
+    }
+  });
+  if (log.length > 0) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, log.length, 5).setValues(log);
+  }
+}
