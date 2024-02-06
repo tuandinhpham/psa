@@ -1,0 +1,97 @@
+function updateFileInfoInColumns() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var startRow = 2; // Dòng bắt đầu cập nhật
+  var numRows = sheet.getLastRow() - startRow + 1; // Số hàng cần xóa và ghi mới
+  
+  // Xóa toàn bộ thông tin từ cột B đến cột D
+  sheet.getRange(startRow, 2, numRows, 4).clearContent();
+  
+  // Lấy URLs từ ô A2
+  var urls = sheet.getRange(2, 1).getValue();
+  
+  // Chia các URL thành mảng các đường link
+  var urlArray = urls.split(', ');
+  
+  // Duyệt qua từng URL
+  for (var i = 0; i < urlArray.length; i++) {
+    // Lấy ID của tệp từ URL
+    var fileId = getFileIdFromUrl(urlArray[i]);
+    
+    // Nếu có ID, thì lấy thông tin về tệp
+    if (fileId) {
+      var fileInfo = getFileInfo(fileId);
+      
+      // Thêm thông tin về tệp vào cột B, C và D
+      if (fileInfo) {
+        sheet.getRange(startRow + i, 2).setValue(i + 1); // Ghi số thứ tự vào cột B
+        sheet.getRange(startRow + i, 3).setValue(fileInfo.name); // Ghi tên file vào cột C
+        sheet.getRange(startRow + i, 4).setValue(urlArray[i]); // Ghi URL vào cột D
+        
+      } else {
+        sheet.getRange(startRow + i, 3).setValue("Không thể lấy thông tin từ URL: " + urlArray[i]);
+      }
+    } else {
+      sheet.getRange(startRow + i, 3).setValue("Không thể lấy ID tệp từ URL: " + urlArray[i] + " hoặc chưa dán link");
+    }
+  }
+}
+
+function getFileIdFromUrl(url) {
+  // Sử dụng biểu thức chính quy để lấy ID từ URL
+  var match = /\/d\/([a-zA-Z0-9-_]+)\//.exec(url);
+  
+  // Nếu có kết quả, trả về ID, ngược lại trả về null
+  return match ? match[1] : null;
+}
+
+function getFileInfo(fileId) {
+  try {
+    // Sử dụng Google Drive API để lấy thông tin về tệp
+    var fileInfo = DriveApp.getFileById(fileId);
+    return {
+      name: fileInfo.getName(),
+    };
+  } catch (e) {
+    Logger.log("Lỗi khi lấy thông tin về tệp: " + e.toString());
+    return null;
+  }
+}
+
+function onEditTrigger(e) {
+  var sheet = e.source.getSheetByName("VanThu"); // Thay bằng tên của bảng tính của bạn
+  var editedRange = e.range;
+
+  // Kiểm tra xem ô được chỉnh sửa có phải là ô A2 không
+  if (sheet.getName() === "VanThu" && editedRange.getRow() === 2 && editedRange.getColumn() === 1) {
+    // Khi có thay đổi tại ô A2, gọi hàm updateFileInfoInColumns()
+    updateFileInfoInColumns();
+  }
+}
+
+function createTrigger() {
+  // Tạo trigger để kích hoạt hàm onEditTrigger khi có sự kiện onEdit
+  var sheet = SpreadsheetApp.getActiveSpreadsheet();
+  ScriptApp.newTrigger('onEditTrigger')
+    .forSpreadsheet(sheet.getId())  // Sửa đổi ở đây, truyền vào ID của bảng tính
+    .onEdit()
+    .create();
+}
+
+function deleteTrigger() {
+  // Xóa trigger khi không cần thiết
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'onEditTrigger') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+}
+
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  // Or DocumentApp or FormApp.
+  ui.createMenu('Văn thư')
+      .addItem('Lấy tên file', 'updateFileInfoInColumns')
+      .addToUi();
+}
+
